@@ -1,0 +1,26 @@
+FROM python:latest as builder
+RUN echo " Installing libs"
+WORKDIR /srcode
+COPY ./test ./test
+COPY ./srcode/* ./
+RUN echo " Building "
+
+FROM alpine as unitest
+WORKDIR /unitest
+COPY --from=builder /srcode/test ./test
+RUN echo "Running unitest"
+
+FROM alpine as security_check
+WORKDIR /security_check
+COPY --from=builder /srcode/* ./
+COPY --from=unitest /unitest/test ./test
+RUN echo "Running security" >> ./test
+
+FROM alpine:latest  as email_reports
+WORKDIR /report
+COPY --from=security_check /security_check/test ./test
+RUN echo "reporting"
+
+FROM alpine as my_app
+WORKDIR /code
+COPY --from=builder /srcode/*.py ./
